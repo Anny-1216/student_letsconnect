@@ -1,8 +1,8 @@
 # app/__init__.py
 
-from flask import Flask
+from flask import Flask, redirect, url_for
 from flask_socketio import SocketIO
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
 from pymongo import MongoClient
@@ -36,11 +36,15 @@ def create_app():
     from .auth import auth_bp
     from .chat import chat_bp
     from .matchmaking import matchmaking_bp
+    from .main_routes import main_bp
     # Import socket events to register them
     from . import socket_events
 
+    app.register_blueprint(main_bp)  # No url_prefix for main routes
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(chat_bp, url_prefix='/chat')
     app.register_blueprint(matchmaking_bp, url_prefix='/matchmaking')
+
+    # Root route is now handled by main_bp
 
     return app

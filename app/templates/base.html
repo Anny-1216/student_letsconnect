@@ -3,42 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title if title else "Let's Connect" }}</title>
+    <title>{% block title %}LetsConnect{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <!-- You might want to download Tailwind and serve it locally in production -->
+    <style>
+        /* Custom scrollbar for chat (optional, but nice with Tailwind) */
+        /* For Webkit browsers */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+    {% block styles %}{% endblock %}
 </head>
 <body class="bg-gray-100 text-gray-800">
-    <nav class="bg-blue-600 text-white p-4 shadow-md">
+    <nav class="bg-indigo-600 text-white p-4 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
-            <a href="{{ url_for('matchmaking.browse_users') if current_user.is_authenticated else url_for('auth.login') }}" class="text-xl font-bold">Let's Connect</a>
+            <a href="{{ url_for('matchmaking.browse_users') if current_user.is_authenticated else url_for('auth.login') }}" class="text-xl font-bold hover:text-indigo-200">LetsConnect</a>
             <div>
                 {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('matchmaking.browse_users') }}" class="px-3 py-2 rounded hover:bg-blue-700">Browse</a>
-                    <a href="{{ url_for('auth.profile') }}" class="px-3 py-2 rounded hover:bg-blue-700">Profile</a>
-                    <a href="{{ url_for('auth.logout') }}" class="px-3 py-2 rounded hover:bg-blue-700">Logout</a>
+                    <a href="{{ url_for('matchmaking.browse_users') }}" class="px-3 py-2 hover:bg-indigo-700 rounded">Browse</a>
+                    <a href="{{ url_for('auth.profile') }}" class="px-3 py-2 hover:bg-indigo-700 rounded">Profile</a>
+                    <a href="{{ url_for('auth.logout') }}" class="px-3 py-2 hover:bg-indigo-700 rounded">Logout</a>
                 {% else %}
-                    <a href="{{ url_for('auth.login') }}" class="px-3 py-2 rounded hover:bg-blue-700">Login</a>
-                    <a href="{{ url_for('auth.signup') }}" class="px-3 py-2 rounded hover:bg-blue-700">Sign Up</a>
+                    <a href="{{ url_for('auth.login') }}" class="px-3 py-2 hover:bg-indigo-700 rounded">Login</a>
+                    <a href="{{ url_for('auth.signup') }}" class="px-3 py-2 hover:bg-indigo-700 rounded">Sign Up</a>
                 {% endif %}
             </div>
         </div>
     </nav>
 
-    <main class="container mx-auto mt-8 p-4">
+    <main class="container mx-auto mt-6 p-4">
+        {# Flash messages section #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
+                <div class="mb-4">
                 {% for category, message in messages %}
-                    <div class="p-4 mb-4 text-sm text-{{ 'green' if category == 'success' else ('red' if category == 'danger' else 'blue') }}-700 bg-{{ 'green' if category == 'success' else ('red' if category == 'danger' else 'blue') }}-100 rounded-lg" role="alert">
+                    <div class="p-4 rounded-md 
+                                {% if category == 'success' %} bg-green-100 border border-green-400 text-green-700 
+                                {% elif category == 'danger' %} bg-red-100 border border-red-400 text-red-700
+                                {% elif category == 'info' %} bg-blue-100 border border-blue-400 text-blue-700
+                                {% elif category == 'warning' %} bg-yellow-100 border border-yellow-400 text-yellow-700
+                                {% else %} bg-gray-100 border border-gray-400 text-gray-700 
+                                {% endif %}" role="alert">
                         {{ message }}
                     </div>
                 {% endfor %}
+                </div>
             {% endif %}
         {% endwith %}
-        {% block content %}{% endblock %}
+
+        {% block content %}
+        {% endblock %}
     </main>
 
-    <footer class="text-center p-4 mt-8 text-gray-600 text-sm">
-        &copy; 2025 Let's Connect. All rights reserved.
-    </footer>
+    {% block scripts %}
+    {# Global scripts can go here #}
+    {% endblock %}
 </body>
 </html>

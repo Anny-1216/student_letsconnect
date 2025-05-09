@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "_user_card_macro.html" import render_user_card %}
+
+{% block title %}{{ title }} - LetsConnect{% endblock %}
+
+{% block content %}
+<div class="container mx-auto py-10 px-4">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-4 md:mb-0">Browse Users</h1>
+        {% if current_user.role == 'junior' %}
+        <div class="bg-indigo-100 border-l-4 border-indigo-500 text-indigo-700 p-4 mb-6 md:mb-0 md:w-auto rounded">
+            <p class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                </svg>
+                As a junior, we're showing you senior mentors by default
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Filter Form -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <form method="GET" action="{{ url_for('matchmaking.browse_users') }}" class="space-y-4 md:space-y-0 md:flex md:items-end md:space-x-4">
+            <div class="flex-1">
+                <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Filter by Role</label>
+                <select name="role" id="role" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="">All Roles</option>
+                    {% for role_option in all_roles %}
+                        <option value="{{ role_option }}" {% if current_filters.role == role_option %}selected{% endif %}>
+                            {{ role_option|capitalize }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="flex-1">
+                <label for="branch" class="block text-sm font-medium text-gray-700 mb-1">Filter by Branch</label>
+                <select name="branch" id="branch" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="">All Branches</option>
+                    {% for branch_option in all_branches %}
+                        <option value="{{ branch_option }}" {% if current_filters.branch == branch_option %}selected{% endif %}>
+                            {{ branch_option|capitalize }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="">
+                <button type="submit" class="w-full md:w-auto py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- User Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% if users %}
+            {% for user in users %}
+                {% if user.username != current_user.username %}
+                    {{ render_user_card(user) }}
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="col-span-3 py-16 text-center">
+                <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <h3 class="text-xl font-medium text-gray-900 mb-2">No users found</h3>
+                <p class="text-gray-500">No users match your current filter criteria. Try changing your filters or check back later.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

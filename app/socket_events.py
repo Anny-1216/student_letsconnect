@@ -5,8 +5,11 @@ from .models import save_message # Assuming you have a save_message function in 
 
 # Placeholder for get_room_name function, will be defined properly later
 def get_room_name(user1_sid, user2_sid):
-    # Ensure consistent room naming
-    return '_'.join(sorted((user1_sid, user2_sid)))
+    # Ensure consistent room naming by sorting usernames alphabetically
+    # This ensures that both users generate the same room name regardless of who initiates
+    # It could be user SIDs if they are stable and known, or usernames if they are unique identifiers for chat participants
+    participants = sorted([str(user1_sid).lower(), str(user2_sid).lower()])
+    return f"{participants[0]}_{participants[1]}"
 
 @socketio.on('join')
 def on_join(data):

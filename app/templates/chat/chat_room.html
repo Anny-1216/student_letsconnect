@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        const socket = io();
+
+        const roomName = "{{ room_name }}";
+        const currentUsername = "{{ current_user.username }}";
+        const targetUsername = "{{ target_user.username }}";
+
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('message_input');
+        const sendButton = document.getElementById('send_button');
+
+        // Function to append a message to the chat window
+        function appendMessage(data) {
+            const msgDiv = document.createElement('div');
+            
+            if (data.sender === currentUsername) {
+                // Current user's message (sender)
+                msgDiv.className = 'flex justify-end mb-4';
+                msgDiv.innerHTML = `
+                    <div class="mr-2 py-3 px-4 bg-indigo-500 rounded-bl-3xl rounded-tl-3xl rounded-tr-xl text-white max-w-xs lg:max-w-md">
+                        <p class="text-sm">${data.content}</p>
+                        <p class="text-right text-xs text-indigo-100 mt-1">${new Date(data.timestamp).toLocaleTimeString()}</p>
+                    </div>
+                    <img src="https://ui-avatars.com/api/?name=${currentUsername[0].toUpperCase()}&background=6366F1&color=fff" class="h-8 w-8 rounded-full bg-indigo-200 object-cover" alt="${currentUsername}">
+                `;
+            } else {
+                // Other user's message (receiver)
+                msgDiv.className = 'flex justify-start mb-4';
+                msgDiv.innerHTML = `
+                    <img src="https://ui-avatars.com/api/?name=${data.sender[0].toUpperCase()}&background=818CF8&color=fff" class="h-8 w-8 rounded-full bg-indigo-200 object-cover" alt="${data.sender}">
+                    <div class="ml-2 py-3 px-4 bg-gray-200 rounded-br-3xl rounded-tr-3xl rounded-tl-xl text-gray-800 max-w-xs lg:max-w-md">
+                        <p class="text-sm">${data.content}</p>
+                        <p class="text-right text-xs text-gray-500 mt-1">${new Date(data.timestamp).toLocaleTimeString()}</p>
+                    </div>
+                `;
+            }
+            
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to bottom
+        }
+
+        // Join the chat room
+        socket.emit('join', { 'username': currentUsername, 'room': roomName });
+
+        // Listen for new messages
+        socket.on('message', function(data) {
+            // Ensure the message is for the current room/context
+            if (data.room === roomName) {
+                appendMessage(data);
+            }
+        });
+
+        // Listen for status messages (e.g., user join/leave)
+        socket.on('status', function(data) {
+            console.log('Status:', data.msg);
+        });
+
+        // Listen for error messages from the server
+        socket.on('error', function(data) {
+            console.error('Socket Error:', data.msg);
+            // Displaying the error via an alert for now, you might want a more subtle UI notification
+            alert('Chat Error: ' + data.msg);
+        });
+
+        // Handle sending a message
+        sendButton.addEventListener('click', sendMessage);
+        
+        // Allow sending message with Enter key
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        function sendMessage() {
+            const messageContent = messageInput.value.trim();
+            if (messageContent) {
+                const messageData = {
+                    'sender': currentUsername,
+                    'receiver': targetUsername,
+                    'content': messageContent,
+                    'room': roomName
+                };
+                socket.emit('message', messageData);
+                messageInput.value = ''; // Clear input field
+            }
+        }
+
+        // Scroll to bottom of messages on initial load
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-screen bg-gray-100">
+    <!-- Chat Header -->
+    <div class="bg-white border-b shadow-sm p-4 flex items-center">
+        <a href="{{ url_for('matchmaking.browse_users') }}" class="mr-4">
+            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+        </a>
+        <img src="https://ui-avatars.com/api/?name={{ target_user.username[0].upper() }}&background=818CF8&color=fff" class="h-10 w-10 rounded-full bg-indigo-200 object-cover" alt="{{ target_user.username }}">
+        <div class="ml-3">
+            <p class="text-lg font-semibold text-gray-900">{{ target_user.username|capitalize }}</p>
+            <p class="text-xs text-gray-600">{{ target_user.role|capitalize }} • {{ target_user.branch|capitalize if target_user.branch else 'No branch' }}</p>
+        </div>
+    </div>
+    
+    <!-- Chat Messages -->
+    <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-4 chat-messages">
+        <!-- Existing messages -->
+        {% for message in chat_messages %}
+            {% if message.sender_username == current_user.username %}
+                <!-- Sent message (by current user) -->
+                <div class="flex justify-end mb-4">
+                    <div class="mr-2 py-3 px-4 bg-indigo-500 rounded-bl-3xl rounded-tl-3xl rounded-tr-xl text-white max-w-xs lg:max-w-md">
+                        <p class="text-sm">{{ message.content }}</p>
+                        <p class="text-right text-xs text-indigo-100 mt-1">{{ message.timestamp.strftime('%H:%M') }}</p>
+                    </div>
+                    <img src="https://ui-avatars.com/api/?name={{ current_user.username[0].upper() }}&background=6366F1&color=fff" class="h-8 w-8 rounded-full object-cover" alt="{{ current_user.username }}">
+                </div>
+            {% else %}
+                <!-- Received message -->
+                <div class="flex justify-start mb-4">
+                    <img src="https://ui-avatars.com/api/?name={{ message.sender_username[0].upper() }}&background=818CF8&color=fff" class="h-8 w-8 rounded-full object-cover" alt="{{ message.sender_username }}">
+                    <div class="ml-2 py-3 px-4 bg-gray-200 rounded-br-3xl rounded-tr-3xl rounded-tl-xl text-gray-800 max-w-xs lg:max-w-md">
+                        <p class="text-sm">{{ message.content }}</p>
+                        <p class="text-right text-xs text-gray-500 mt-1">{{ message.timestamp.strftime('%H:%M') }}</p>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    
+    <!-- Message Input -->
+    <div class="bg-white border-t p-4">
+        <div class="flex items-center">
+            <input id="message_input" type="text" placeholder="Type a message..." class="flex-1 border border-gray-300 rounded-l-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+            <button id="send_button" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-r-lg px-6 py-3 transition-colors duration-150">
+                <div class="flex items-center">
+                    <span class="mr-1">Send</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

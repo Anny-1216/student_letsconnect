@@ -70,6 +70,25 @@ class User(UserMixin): # UserMixin provides is_authenticated, is_active, is_anon
             return User(**{k:v for k,v in user_data.items() if k != '_id'}, id=str(user_data['_id']))
         return None
 
+    @staticmethod
+    def find_all(query_filter=None):
+        """Finds all users, optionally applying a filter."""
+        if query_filter is None:
+            query_filter = {}
+        users_cursor = db.users.find(query_filter)
+        users_list = []
+        for user_data in users_cursor:
+            users_list.append(User(**{k:v for k,v in user_data.items() if k != '_id'}, id=str(user_data['_id'])))
+        return users_list
+
+    @staticmethod
+    def find_by_role(role):
+        return User.find_all({"role": role})
+
+    @staticmethod
+    def find_by_branch(branch):
+        return User.find_all({"branch": branch})
+
 # Example of how you might structure Message saving, though not a full class model here
 def save_message(sender_username, receiver_username, content, room_name):
     sender = User.find_by_username(sender_username)
