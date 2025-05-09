@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_formhelpers.html" import render_field %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md mt-10">
+    <h2 class="text-2xl font-bold text-center text-gray-700 mb-6">{{ title }}</h2>
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        {{ render_field(form.branch, class="w-full p-2 border border-gray-300 rounded mt-1 mb-4") }}
+        {{ render_field(form.year, class="w-full p-2 border border-gray-300 rounded mt-1 mb-4") }} 
+        {{ render_field(form.bio, class="w-full p-2 border border-gray-300 rounded mt-1 mb-4 h-24") }} 
+        {{ render_field(form.submit, class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline") }}
+    </form>
+</div>
+{% endblock %}
