@@ -1,9 +1,14 @@
 {% macro render_user_card(user) %}
 <div class="bg-white rounded-xl shadow-lg p-6 transition duration-300 transform hover:shadow-xl hover:scale-105">
     <div class="flex items-center mb-4">
-        <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mr-4 text-indigo-700 font-bold">
-            {{ user.username[:2].upper() }}
-        </div>
+        {% if user.profile_photo %}
+            <img src="{{ url_for('static', filename='uploads/profile_pics/' + user.profile_photo) }}" 
+                 class="w-12 h-12 rounded-full object-cover mr-4" alt="{{ user.username }}">
+        {% else %}
+            <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mr-4 text-indigo-700 font-bold">
+                {{ user.username[:2].upper() }}
+            </div>
+        {% endif %}
         <div>
             <h3 class="text-xl font-semibold text-gray-800">{{ user.username|capitalize }}</h3>
             <p class="text-sm text-indigo-600">{{ user.role|capitalize }}</p>

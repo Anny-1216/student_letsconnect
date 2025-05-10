@@ -38,9 +38,32 @@
                 <label for="branch" class="block text-sm font-medium text-gray-700 mb-1">Filter by Branch</label>
                 <select name="branch" id="branch" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                     <option value="">All Branches</option>
-                    {% for branch_option in all_branches %}
+                    {% set custom_branches = [
+                        "Computer Engineering", 
+                        "Information Technology", 
+                        "Electronics & Telecommunication Engineering", 
+                        "Mechanical Engineering", 
+                        "Civil Engineering", 
+                        "Artificial Intelligence & Machine Learning (AIML)", 
+                        "Artificial Intelligence & Data Science (AIDS)", 
+                        "Electronics & Computer Engineering (ECE)", 
+                        "Internet of Things (IOT)"
+                    ] %}
+                    {% for branch_option in custom_branches %}
                         <option value="{{ branch_option }}" {% if current_filters.branch == branch_option %}selected{% endif %}>
-                            {{ branch_option|capitalize }}
+                            {{ branch_option }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex-1">
+                <label for="year" class="block text-sm font-medium text-gray-700 mb-1">Filter by Year</label>
+                <select name="year" id="year" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="">All Years</option>
+                    {% for year_option in [1, 2, 3, 4] %}
+                        <option value="{{ year_option }}" {% if current_filters.year == year_option|string %}selected{% endif %}>
+                            Year {{ year_option }}
                         </option>
                     {% endfor %}
                 </select>

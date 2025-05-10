@@ -12,6 +12,8 @@
         const roomName = "{{ room_name }}";
         const currentUsername = "{{ current_user.username }}";
         const targetUsername = "{{ target_user.username }}";
+        const currentUserPhoto = "{{ current_user.profile_photo }}";
+        const targetUserPhoto = "{{ target_user.profile_photo }}";
 
         const messagesDiv = document.getElementById('messages');
         const messageInput = document.getElementById('message_input');
@@ -19,9 +21,12 @@
 
         // Function to append a message to the chat window
         function appendMessage(data) {
+            console.log('appendMessage called with data:', data); // Added log
+            console.log('Comparing data.sender:', data.sender, 'with currentUsername:', currentUsername); // Added log
             const msgDiv = document.createElement('div');
             
             if (data.sender === currentUsername) {
+                console.log('Message is from current user (sender).'); // Added log
                 // Current user's message (sender)
                 msgDiv.className = 'flex justify-end mb-4';
                 msgDiv.innerHTML = `
@@ -29,13 +34,18 @@
                         <p class="text-sm">${data.content}</p>
                         <p class="text-right text-xs text-indigo-100 mt-1">${new Date(data.timestamp).toLocaleTimeString()}</p>
                     </div>
-                    <img src="https://ui-avatars.com/api/?name=${currentUsername[0].toUpperCase()}&background=6366F1&color=fff" class="h-8 w-8 rounded-full bg-indigo-200 object-cover" alt="${currentUsername}">
+                    ${currentUserPhoto ? 
+                    `<img src="/static/uploads/profile_pics/${currentUserPhoto}" class="h-8 w-8 rounded-full object-cover" alt="${currentUsername}">` :
+                    `<img src="https://ui-avatars.com/api/?name=${currentUsername[0].toUpperCase()}&background=6366F1&color=fff" class="h-8 w-8 rounded-full bg-indigo-200 object-cover" alt="${currentUsername}">`}
                 `;
             } else {
+                console.log('Message is from other user.'); // Added log
                 // Other user's message (receiver)
                 msgDiv.className = 'flex justify-start mb-4';
                 msgDiv.innerHTML = `
-                    <img src="https://ui-avatars.com/api/?name=${data.sender[0].toUpperCase()}&background=818CF8&color=fff" class="h-8 w-8 rounded-full bg-indigo-200 object-cover" alt="${data.sender}">
+                    ${targetUserPhoto ? 
+                    `<img src="/static/uploads/profile_pics/${targetUserPhoto}" class="h-8 w-8 rounded-full object-cover" alt="${data.sender}">` :
+                    `<img src="https://ui-avatars.com/api/?name=${data.sender[0].toUpperCase()}&background=818CF8&color=fff" class="h-8 w-8 rounded-full bg-indigo-200 object-cover" alt="${data.sender}">`}
                     <div class="ml-2 py-3 px-4 bg-gray-200 rounded-br-3xl rounded-tr-3xl rounded-tl-xl text-gray-800 max-w-xs lg:max-w-md">
                         <p class="text-sm">${data.content}</p>
                         <p class="text-right text-xs text-gray-500 mt-1">${new Date(data.timestamp).toLocaleTimeString()}</p>
@@ -45,6 +55,7 @@
             
             messagesDiv.appendChild(msgDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to bottom
+            console.log('Message appended to messagesDiv.'); // Added log
         }
 
         // Join the chat room
@@ -52,12 +63,25 @@
 
         // Listen for new messages
         socket.on('message', function(data) {
+            console.log('Message received on client:', data); // Added log
+            console.log('Comparing data.room:', data.room, 'with roomName:', roomName); // Added log
             // Ensure the message is for the current room/context
             if (data.room === roomName) {
+                console.log('Room matches. Calling appendMessage.'); // Added log
                 appendMessage(data);
+            } else {
+                console.log('Room does NOT match. Message ignored. data.room:', data.room, 'Expected roomName:', roomName); // Added log
             }
         });
 
+        // Listen for direct acknowledgments of sent messages (new!)
+        socket.on('message_ack', function(data) {
+            console.log('Message acknowledgment received:', data);
+            // No need to check room here as it's a direct ACK to the sender
+            appendMessage(data);
+            console.log('Message displayed from ack event');
+        });
+        
         // Listen for status messages (e.g., user join/leave)
         socket.on('status', function(data) {
             console.log('Status:', data.msg);
@@ -89,6 +113,7 @@
                     'content': messageContent,
                     'room': roomName
                 };
+                console.log('Sending message:', messageData); // Added log
                 socket.emit('message', messageData);
                 messageInput.value = ''; // Clear input field
             }
@@ -109,7 +134,11 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
             </svg>
         </a>
-        <img src="https://ui-avatars.com/api/?name={{ target_user.username[0].upper() }}&background=818CF8&color=fff" class="h-10 w-10 rounded-full bg-indigo-200 object-cover" alt="{{ target_user.username }}">
+        {% if target_user.profile_photo %}
+            <img src="{{ url_for('static', filename='uploads/profile_pics/' + target_user.profile_photo) }}" class="h-10 w-10 rounded-full object-cover" alt="{{ target_user.username }}">
+        {% else %}
+            <img src="https://ui-avatars.com/api/?name={{ target_user.username[0].upper() }}&background=818CF8&color=fff" class="h-10 w-10 rounded-full bg-indigo-200 object-cover" alt="{{ target_user.username }}">
+        {% endif %}
         <div class="ml-3">
             <p class="text-lg font-semibold text-gray-900">{{ target_user.username|capitalize }}</p>
             <p class="text-xs text-gray-600">{{ target_user.role|capitalize }} • {{ target_user.branch|capitalize if target_user.branch else 'No branch' }}</p>
@@ -127,12 +156,20 @@
                         <p class="text-sm">{{ message.content }}</p>
                         <p class="text-right text-xs text-indigo-100 mt-1">{{ message.timestamp.strftime('%H:%M') }}</p>
                     </div>
-                    <img src="https://ui-avatars.com/api/?name={{ current_user.username[0].upper() }}&background=6366F1&color=fff" class="h-8 w-8 rounded-full object-cover" alt="{{ current_user.username }}">
+                    {% if current_user.profile_photo %}
+                        <img src="{{ url_for('static', filename='uploads/profile_pics/' + current_user.profile_photo) }}" class="h-8 w-8 rounded-full object-cover" alt="{{ current_user.username }}">
+                    {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ current_user.username[0].upper() }}&background=6366F1&color=fff" class="h-8 w-8 rounded-full object-cover" alt="{{ current_user.username }}">
+                    {% endif %}
                 </div>
             {% else %}
                 <!-- Received message -->
                 <div class="flex justify-start mb-4">
-                    <img src="https://ui-avatars.com/api/?name={{ message.sender_username[0].upper() }}&background=818CF8&color=fff" class="h-8 w-8 rounded-full object-cover" alt="{{ message.sender_username }}">
+                    {% if target_user.profile_photo %}
+                        <img src="{{ url_for('static', filename='uploads/profile_pics/' + target_user.profile_photo) }}" class="h-8 w-8 rounded-full object-cover" alt="{{ message.sender_username }}">
+                    {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ message.sender_username[0].upper() }}&background=818CF8&color=fff" class="h-8 w-8 rounded-full object-cover" alt="{{ message.sender_username }}">
+                    {% endif %}
                     <div class="ml-2 py-3 px-4 bg-gray-200 rounded-br-3xl rounded-tr-3xl rounded-tl-xl text-gray-800 max-w-xs lg:max-w-md">
                         <p class="text-sm">{{ message.content }}</p>
                         <p class="text-right text-xs text-gray-500 mt-1">{{ message.timestamp.strftime('%H:%M') }}</p>
