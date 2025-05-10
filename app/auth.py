@@ -187,7 +187,7 @@ def profile():
             form.linkedin.data = current_user.social_links.get("linkedin", "")
             form.twitter.data = current_user.social_links.get("twitter", "")
         
-    return render_template('auth/profile.html', title='Profile', form=form)
+    return render_template('auth/profile.html', title='Profile', form=form, user_profile=current_user)
 
 @auth_bp.route('/upload_profile_photo', methods=['POST'])
 @login_required
@@ -242,10 +242,10 @@ def reset_password_request():
         user = User.find_by_email(form.email.data)
         if user:
             send_password_reset_email(user)
-            flash('An email has been sent with instructions to reset your password.', 'info')
+            flash('An email has been sent with instructions to reset your password. Please also check your spam folder if you don\'t see the email in your inbox.', 'info')
         else:
             # Flash message even if user doesn't exist to prevent email enumeration
-            flash('An email has been sent with instructions to reset your password.', 'info')
+            flash('An email has been sent with instructions to reset your password. Please also check your spam folder if you don\'t see the email in your inbox.', 'info')
         return redirect(url_for('auth.login'))
     return render_template('auth/request_reset_password.html', title='Request Password Reset', form=form)
 

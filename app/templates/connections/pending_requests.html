@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - LetsConnect{% endblock %}
+
+{% block content %}
+<div class="container mx-auto py-10 px-4">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">{{ title }}</h1>
+
+    {% if requests %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for req in requests %}
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center mb-4">
+                        {% if req['sender_profile_photo'] %}
+                            <img src="{{ url_for('static', filename='uploads/profile_pics/' + req['sender_profile_photo']) }}"
+                                 class="w-12 h-12 rounded-full object-cover mr-4" alt="{{ req['sender_username'] }}">
+                        {% else %}
+                            <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mr-4 text-indigo-700 font-bold">
+                                {{ req['sender_username'][:2].upper() }}
+                            </div>
+                        {% endif %}
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-800">{{ req['sender_username']|capitalize }}</h3>
+                            <p class="text-sm text-gray-600">Wants to connect with you.</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex space-x-2">
+                        <form action="{{ url_for('connections.respond_to_request', request_id=req['_id'], action='accept') }}" method="POST" class="flex-1">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                Accept
+                            </button>
+                        </form>
+                        <form action="{{ url_for('connections.respond_to_request', request_id=req['_id'], action='reject') }}" method="POST" class="flex-1">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Reject
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-16">
+            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h3 class="text-xl font-medium text-gray-900 mb-2">No Pending Requests</h3>
+            <p class="text-gray-500">You have no new connection requests at this time.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

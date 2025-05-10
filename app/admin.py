@@ -114,3 +114,49 @@ def toggle_activation(user_id):
     status = "activated" if user.is_active else "deactivated"
     flash(f'User {user.username} has been {status}.', 'success')
     return redirect(url_for('admin.dashboard'))
+
+@admin_bp.route('/users/<user_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_user(user_id):
+    user = User.find_by_username(user_id) # Assuming user_id is username for simplicity, or use ObjectId if it is id
+    if not user:
+        user_data = db.users.find_one({"_id": ObjectId(user_id)})
+        if user_data:
+            user = User(
+                id=str(user_data['_id']),
+                username=user_data.get('username'),
+                email=user_data.get('email'),
+                password_hash=user_data.get('password_hash'),
+                role=user_data.get('role'),
+                branch=user_data.get('branch'),
+                year=user_data.get('year'),
+                bio=user_data.get('bio'),
+                profile_photo=user_data.get('profile_photo'),
+                student_document=user_data.get('student_document'),
+                full_name=user_data.get('full_name'),
+                skills=user_data.get('skills', []),
+                social_links=user_data.get('social_links', {}),
+                last_seen=user_data.get('last_seen'),
+                email_verified=user_data.get('email_verified', False),
+                email_verification_token=user_data.get('email_verification_token'),
+                email_verification_token_expiry=user_data.get('email_verification_token_expiry'),
+                password_reset_token=user_data.get('password_reset_token'),
+                password_reset_token_expiry=user_data.get('password_reset_token_expiry'),
+                is_active_param=user_data.get('is_active', True),
+                is_admin=user_data.get('is_admin', False),
+                student_document_verified=user_data.get('student_document_verified', False)
+            )
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+    if user.is_admin and user.id == current_user.id:
+        flash('Admins cannot delete themselves.', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+    if user.delete():
+        flash(f'User {user.username} has been deleted successfully.', 'success')
+    else:
+        flash(f'Error deleting user {user.username}.', 'danger')
+    return redirect(url_for('admin.dashboard'))

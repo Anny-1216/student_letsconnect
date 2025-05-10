@@ -23,35 +23,36 @@ def on_join(data):
 # @login_required # Removed decorator
 def handle_message(data):
     """Handles incoming chat messages."""
-    # print(f"Received message: {data} from {data.get('sender')}") # Use sender from data
-    
-    # TODO: Implement a more robust way to verify the sender's identity
-    # For example, associate request.sid with a username upon 'join' 
-    # and verify against that stored association.
-    # For now, we proceed with the sender from the data, assuming client-side authentication handled it.
-
-    # if current_user and current_user.is_authenticated and current_user.username != data.get('sender'):
-    #     emit('error', {'msg': 'Sender mismatch.'}, room=request.sid)
-    #     return
-    # elif not current_user or not current_user.is_authenticated:
-    #     emit('error', {'msg': 'User not authenticated for sending messages.'}, room=request.sid)
-    #     return
-
     sender_username = data.get('sender')
     receiver_username = data.get('receiver')
-    content = data.get('content')
+    content = data.get('content') # For text messages
     room_name = data.get('room')
+    message_type = data.get('message_type', 'text') # Default to text
+    file_url = data.get('file_url') # For file messages
 
-    if not all([sender_username, receiver_username, content, room_name]):
-        emit('error', {'msg': 'Missing data in message.'}, room=request.sid)
+    if not all([sender_username, receiver_username, room_name]):
+        emit('error', {'msg': 'Missing sender, receiver, or room name.'}, room=request.sid)
         return
+
+    # For text messages, content is required. For file messages, file_url is required.
+    if message_type == 'text' and not content:
+        emit('error', {'msg': 'Missing content for text message.'}, room=request.sid)
+        return
+    if message_type != 'text' and not file_url:
+        emit('error', {'msg': f'Missing file_url for {message_type} message.'}, room=request.sid)
+        return
+    # If it's a file message, content can be a filename or empty
+    if message_type != 'text' and not content:
+        content = file_url.split('/')[-1] # Use filename as content if not provided
 
     # Save the message to the database
     saved_message_doc = save_message(
         sender_username=sender_username,
         receiver_username=receiver_username,
-        content=content,
-        room_name=room_name
+        content=content, # This will be filename for file messages if original content is empty
+        room_name=room_name,
+        message_type=message_type,
+        file_url=file_url
     )
 
     if saved_message_doc:
@@ -63,6 +64,8 @@ def handle_message(data):
             'room': saved_message_doc['room'],
             'timestamp': saved_message_doc['timestamp'].isoformat(),
             'read_at': saved_message_doc['read_at'].isoformat() if saved_message_doc['read_at'] else None,
+            'message_type': saved_message_doc['message_type'], # Add message_type
+            'file_url': saved_message_doc['file_url'] # Add file_url
         }
 
         # Emit the message to the specific room, skipping the sender

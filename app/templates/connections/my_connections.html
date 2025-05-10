@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "_user_card_macro.html" import render_user_card %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ title }}</h2>
+    {% if connections %}
+        <div class="row">
+            {% for connection in connections %}
+                <div class="col-md-4 mb-3">
+                    {{ render_user_card(connection, current_user_obj=current_user_obj, get_connection_status_between_users=get_connection_status_between_users) }}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>You don't have any connections yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

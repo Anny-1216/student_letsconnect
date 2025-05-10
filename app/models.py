@@ -107,6 +107,17 @@ class User(UserMixin): # UserMixin provides is_authenticated, is_active, is_anon
             self.id = str(result.inserted_id)
         return self.id
 
+    def delete(self):
+        """Deletes the user from the database."""
+        if self.id:
+            db.users.delete_one({"_id": ObjectId(self.id)})
+            # Optionally, you might want to delete related data 
+            # (e.g., messages, uploaded files) associated with the user here.
+            # For example, to delete messages sent or received by the user:
+            # db.messages.delete_many({"$or": [{"sender_id": ObjectId(self.id)}, {"receiver_id": ObjectId(self.id)}]})
+            return True
+        return False
+
     @staticmethod
     def find_by_username(username):
         user_data = db.users.find_one({"username": username})
@@ -298,8 +309,177 @@ class User(UserMixin): # UserMixin provides is_authenticated, is_active, is_anon
     def find_by_branch(branch):
         return User.find_all({"branch": branch})
 
+    @staticmethod
+    def find_by_id(user_id):
+        try:
+            user_data = db.users.find_one({"_id": ObjectId(user_id)})
+        except Exception: # Handles invalid ObjectId format
+            return None
+        if user_data:
+            return User(
+                id=str(user_data['_id']),
+                username=user_data.get('username'),
+                email=user_data.get('email'),
+                password_hash=user_data.get('password_hash'),
+                role=user_data.get('role'),
+                branch=user_data.get('branch'),
+                year=user_data.get('year'),
+                bio=user_data.get('bio'),
+                profile_photo=user_data.get('profile_photo'),
+                student_document=user_data.get('student_document'),
+                full_name=user_data.get('full_name'),
+                skills=user_data.get('skills', []),
+                social_links=user_data.get('social_links', {}),
+                last_seen=user_data.get('last_seen'),
+                email_verified=user_data.get('email_verified', False),
+                email_verification_token=user_data.get('email_verification_token'),
+                email_verification_token_expiry=user_data.get('email_verification_token_expiry'),
+                password_reset_token=user_data.get('password_reset_token'),
+                password_reset_token_expiry=user_data.get('password_reset_token_expiry'),
+                is_active_param=user_data.get('is_active', True),
+                is_admin=user_data.get('is_admin', False),
+                student_document_verified=user_data.get('student_document_verified', False)
+            )
+        return None
+
+# ConnectionRequest Model (Simplified - stored in its own collection)
+# Statuses: "pending", "accepted", "rejected"
+def create_connection_request(sender_id, receiver_id):
+    """Creates a new connection request if one doesn't already exist in pending or accepted state."""
+    # Ensure IDs are ObjectIds
+    s_id = ObjectId(sender_id) if not isinstance(sender_id, ObjectId) else sender_id
+    r_id = ObjectId(receiver_id) if not isinstance(receiver_id, ObjectId) else receiver_id
+
+    existing_request = db.connection_requests.find_one({
+        "$or": [
+            {"sender_id": s_id, "receiver_id": r_id, "status": {"$in": ["pending", "accepted"]}},
+            {"sender_id": r_id, "receiver_id": s_id, "status": "accepted"} # Check if already connected
+        ]
+    })
+    if existing_request:
+        return None 
+
+    request_data = {
+        "sender_id": s_id,
+        "receiver_id": r_id,
+        "status": "pending", 
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    result = db.connection_requests.insert_one(request_data)
+    return db.connection_requests.find_one({"_id": result.inserted_id})
+
+def get_connection_request_by_id(request_id):
+    try:
+        req_obj_id = ObjectId(request_id) if not isinstance(request_id, ObjectId) else request_id
+        return db.connection_requests.find_one({"_id": req_obj_id})
+    except Exception:
+        return None
+
+def update_connection_request_status(request_id, status, user_id_making_change):
+    """Updates the status of a connection request."""
+    try:
+        req_obj_id = ObjectId(request_id) if not isinstance(request_id, ObjectId) else request_id
+        user_making_change_oid = ObjectId(user_id_making_change) if not isinstance(user_id_making_change, ObjectId) else user_id_making_change
+    except Exception:
+        return None 
+
+    request_doc = db.connection_requests.find_one({"_id": req_obj_id})
+    if not request_doc:
+        return None 
+
+    if request_doc['receiver_id'] != user_making_change_oid and status in ["accepted", "rejected"]:
+        return "unauthorized" 
+
+    if request_doc['status'] != 'pending' and status in ["accepted", "rejected"]:
+        return "not_pending" 
+
+    update_result = db.connection_requests.update_one(
+        {"_id": req_obj_id},
+        {"$set": {"status": status, "updated_at": datetime.utcnow()}}
+    )
+
+    if update_result.modified_count > 0 and status == "accepted":
+        db.users.update_one({"_id": request_doc['sender_id']}, {"$addToSet": {"connections": request_doc['receiver_id']}})
+        db.users.update_one({"_id": request_doc['receiver_id']}, {"$addToSet": {"connections": request_doc['sender_id']}})
+    
+    return db.connection_requests.find_one({"_id": req_obj_id})
+
+def get_pending_connection_requests(user_id):
+    """Gets all pending requests where the user is the receiver."""
+    user_oid = ObjectId(user_id) if not isinstance(user_id, ObjectId) else user_id
+    pending_requests_cursor = db.connection_requests.find({"receiver_id": user_oid, "status": "pending"}).sort("created_at", -1)
+    
+    requests_with_sender_info = []
+    for req in pending_requests_cursor:
+        sender = User.find_by_id(str(req['sender_id'])) 
+        if sender:
+            req['sender_username'] = sender.username
+            req['sender_profile_photo'] = sender.profile_photo
+        else:
+            req['sender_username'] = 'Unknown User'
+            req['sender_profile_photo'] = None
+        req['_id'] = str(req['_id']) 
+        req['sender_id'] = str(req['sender_id'])
+        req['receiver_id'] = str(req['receiver_id'])
+        requests_with_sender_info.append(req)
+    return requests_with_sender_info
+
+def get_user_connections(user_id):
+    """Gets a list of User objects the given user is connected with."""
+    user_oid = ObjectId(user_id) if not isinstance(user_id, ObjectId) else user_id
+    user_doc = db.users.find_one({"_id": user_oid}, {"connections": 1})
+    if not user_doc or "connections" not in user_doc:
+        return []
+    
+    connected_user_ids = user_doc.get("connections", [])
+    if not connected_user_ids: 
+        return []
+        
+    connected_users_data = db.users.find({"_id": {"$in": connected_user_ids}})
+    
+    connections = []
+    for user_data in connected_users_data:
+        connections.append(User.find_by_id(str(user_data['_id'])))
+    return [conn for conn in connections if conn is not None] # Filter out None if find_by_id fails
+
+def are_users_connected(user1_id, user2_id):
+    """Checks if two users are connected."""
+    u1_oid = ObjectId(user1_id) if not isinstance(user1_id, ObjectId) else user1_id
+    u2_oid = ObjectId(user2_id) if not isinstance(user2_id, ObjectId) else user2_id
+    user1 = db.users.find_one({"_id": u1_oid, "connections": u2_oid})
+    return user1 is not None
+
+def get_connection_status_between_users(user1_id, user2_id):
+    """Determines the connection status between two users."""
+    u1_oid = ObjectId(user1_id) if not isinstance(user1_id, ObjectId) else user1_id
+    u2_oid = ObjectId(user2_id) if not isinstance(user2_id, ObjectId) else user2_id
+
+    if are_users_connected(u1_oid, u2_oid):
+        return "connected"
+
+    pending_sent = db.connection_requests.find_one({"sender_id": u1_oid, "receiver_id": u2_oid, "status": "pending"})
+    if pending_sent:
+        return "pending_sent"
+
+    pending_received = db.connection_requests.find_one({"sender_id": u2_oid, "receiver_id": u1_oid, "status": "pending"})
+    if pending_received:
+        return "pending_received"
+    
+    # Check for rejected request sent by user1 to user2
+    rejected_by_receiver = db.connection_requests.find_one({"sender_id": u1_oid, "receiver_id": u2_oid, "status": "rejected"})
+    if rejected_by_receiver:
+        return "rejected_by_them"
+
+    # Check for rejected request received by user1 from user2 (i.e., user1 rejected it)
+    rejected_by_sender = db.connection_requests.find_one({"sender_id": u2_oid, "receiver_id": u1_oid, "status": "rejected"})
+    if rejected_by_sender:
+        return "rejected_by_you"
+
+    return "none"
+
 # Example of how you might structure Message saving, though not a full class model here
-def save_message(sender_username, receiver_username, content, room_name):
+def save_message(sender_username, receiver_username, content, room_name, message_type="text", file_url=None): # Added message_type and file_url
     sender = User.find_by_username(sender_username)
     receiver = User.find_by_username(receiver_username)
 
@@ -315,7 +495,9 @@ def save_message(sender_username, receiver_username, content, room_name):
         "content": content,
         "timestamp": datetime.utcnow(),
         "room": room_name,
-        "read_at": None  # New field for read receipts
+        "read_at": None,  # New field for read receipts
+        "message_type": message_type, # New field
+        "file_url": file_url # New field
     }
     result = db.messages.insert_one(message_data)
     # Return the full message document including the new _id and other fields
@@ -330,7 +512,8 @@ def get_messages_for_room(room_name, limit=50):
             msg['sender_id'] = str(msg['sender_id'])
         if 'receiver_id' in msg and isinstance(msg['receiver_id'], ObjectId):
             msg['receiver_id'] = str(msg['receiver_id'])
-        # Ensure read_at is included, it should be already by find()
+        # Ensure message_type and file_url are included
+        # No specific change needed here as find() will return all fields by default
         messages_list.append(msg)
     return messages_list # Returns a list of dicts
 

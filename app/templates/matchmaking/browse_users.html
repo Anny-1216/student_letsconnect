@@ -80,9 +80,9 @@
     <!-- User Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% if users %}
-            {% for user in users %}
-                {% if user.username != current_user.username %}
-                    {{ render_user_card(user) }}
+            {% for user_item in users %}
+                {% if user_item.username != current_user.username %}
+                    {{ render_user_card(user_item, current_user, get_connection_status_between_users) }}
                 {% endif %}
             {% endfor %}
         {% else %}
