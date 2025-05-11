@@ -72,7 +72,16 @@ def create_app():
             if not user1_id or not user2_id:
                 return "none"
             return get_connection_status_between_users(user1_id, user2_id)
-        return dict(get_connection_status_between_users=get_conn_status, User=User)
+        
+        from .models import get_unread_message_count  # Import here to avoid circular imports
+        
+        print("Utility processor executed: get_unread_message_count is available")
+        
+        return dict(
+            get_connection_status_between_users=get_conn_status,
+            get_unread_message_count=get_unread_message_count,  # Add this function
+            User=User
+        )
 
     # Import and register blueprints
     from .auth import auth_bp

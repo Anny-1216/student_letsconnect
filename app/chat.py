@@ -3,7 +3,7 @@ import os
 from flask import Blueprint, render_template, redirect, url_for, request, current_app, jsonify, flash # Added flash
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
-from .models import User, get_messages_for_room, are_users_connected # Added are_users_connected
+from .models import User, get_messages_for_room, are_users_connected, mark_all_messages_as_read_in_room # Added mark_all_messages_as_read_in_room
 from .socket_events import get_room_name # Import the get_room_name function
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'mp4', 'webm', 'ogg'}
@@ -39,6 +39,14 @@ def start_chat_page(target_username):
     # Determine the room name using the same logic as in socket_events
     # Ensure this is consistent with how rooms are handled in your SocketIO events
     room = get_room_name(current_user.username, target_user.username)
+
+    # Mark messages from target_user to current_user in this room as read
+    if target_user and current_user:
+        mark_all_messages_as_read_in_room(
+            sender_username=target_user.username, 
+            receiver_username=current_user.username, 
+            room_name=room
+        )
     
     # Fetch existing messages for this room
     # You might want to paginate this or limit the number of messages loaded initially

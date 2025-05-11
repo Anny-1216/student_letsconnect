@@ -1,12 +1,20 @@
-{% macro render_user_card(user, current_user_obj, get_connection_status_between_users) %}
+{% macro render_user_card(user, current_user_obj, get_connection_status_between_users, get_unread_message_count) %}
 {# Get connection status - current_user_obj will be passed from the template calling this macro #}
 {% set conn_status = get_connection_status_between_users(current_user_obj.id, user.id) %}
+{% set unread_count = get_unread_message_count(user.username, current_user_obj.username) %}
 
 <div class="bg-white rounded-xl shadow-lg p-6 transition duration-300 transform hover:shadow-xl hover:scale-105">
     <div class="flex items-center mb-4">
         {% if user.profile_photo %}
-            <img src="{{ url_for('static', filename='uploads/profile_pics/' + user.profile_photo) }}" 
-                 class="w-12 h-12 rounded-full object-cover mr-4" alt="{{ user.username }}">
+            <div class="relative inline-block">
+                <img src="{{ url_for('static', filename='uploads/profile_pics/' + user.profile_photo) }}" 
+                     class="w-12 h-12 rounded-full object-cover mr-4" alt="{{ user.username }}">
+                {% if unread_count > 0 %}
+                    <span class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                        {{ unread_count }}
+                    </span>
+                {% endif %}
+            </div>
         {% else %}
             <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mr-4 text-indigo-700 font-bold">
                 {{ user.username[:2].upper() }}

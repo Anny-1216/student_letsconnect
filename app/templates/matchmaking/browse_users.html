@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_user_card_macro.html" import render_user_card %}
+{% from "_user_card_macro.html" import render_user_card with context %}
 
 {% block title %}{{ title }} - LetsConnect{% endblock %}
 
@@ -82,7 +82,7 @@
         {% if users %}
             {% for user_item in users %}
                 {% if user_item.username != current_user.username %}
-                    {{ render_user_card(user_item, current_user, get_connection_status_between_users) }}
+                    {{ render_user_card(user_item, current_user, get_connection_status_between_users, get_unread_message_count) }}
                 {% endif %}
             {% endfor %}
         {% else %}

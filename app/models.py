@@ -546,3 +546,32 @@ def mark_message_as_read(message_id: str, reader_username: str):
                 "room": message.get("room")
             }
     return None # Not updated (either not recipient, or already read, or DB error)
+
+def get_unread_message_count(sender_username, receiver_username):
+    """Fetches the count of all unread messages from a specific sender to a specific receiver."""
+    query = {
+        "sender_username": sender_username,
+        "receiver_username": receiver_username,
+        "read_at": None
+    }
+    count = db.messages.count_documents(query)
+    return count
+
+def mark_all_messages_as_read_in_room(sender_username, receiver_username, room_name):
+    """Marks all unread messages from a specific sender to a receiver in a room as read."""
+    # sender_user = User.find_by_username(sender_username) # Not strictly needed for the query
+    # receiver_user = User.find_by_username(receiver_username) # Not strictly needed for the query
+
+    # if not sender_user or not receiver_user:
+    #     return 0
+
+    update_result = db.messages.update_many(
+        {
+            "sender_username": sender_username,
+            "receiver_username": receiver_username,
+            "room": room_name,
+            "read_at": None  # Only update messages that are currently unread
+        },
+        {"$set": {"read_at": datetime.utcnow()}}
+    )
+    return update_result.modified_count

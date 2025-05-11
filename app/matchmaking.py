@@ -1,7 +1,7 @@
 # app/matchmaking.py
 from flask import Blueprint, render_template, request, current_app
 from flask_login import login_required, current_user
-from .models import User # Import the User model
+from .models import User, get_unread_message_count # Import the User model and get_unread_message_count
 
 matchmaking_bp = Blueprint('matchmaking', __name__)
 
@@ -45,4 +45,5 @@ def browse_users():
                            users=users_to_display,
                            all_roles=all_roles,
                            all_branches=all_branches,
-                           current_filters={'role': role_filter, 'branch': branch_filter})
+                           current_filters={'role': role_filter, 'branch': branch_filter},
+                           get_unread_message_count=get_unread_message_count) # Pass the function to the template context
