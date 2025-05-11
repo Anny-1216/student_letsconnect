@@ -1,5 +1,6 @@
 # app/__init__.py
 
+import os
 from flask import Flask, redirect, url_for, jsonify # Added jsonify
 from flask_socketio import SocketIO
 from flask_login import LoginManager, current_user
@@ -29,15 +30,18 @@ def create_app():
     # This should be done early, before other app configurations if they depend on URL generation
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     
-    app.config['SECRET_KEY'] = 'your_secret_key'  # Change this!
-    app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key' # Change this!
-    # Flask-Mail configuration - replace with your actual email server details
+    # Configuration
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_secret_key_placeholder')  # Change this!
+    app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'your_jwt_secret_key_placeholder') # Change this!
+    app.config['MONGO_URI'] = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/letsconnect')
+    
+    # Email configuration
     app.config['MAIL_SERVER'] = 'smtp.gmail.com'
     app.config['MAIL_PORT'] = 587
     app.config['MAIL_USE_TLS'] = True
     app.config['MAIL_USE_SSL'] = False
     app.config['MAIL_USERNAME'] = 'chaitanyapaigude1204@gmail.com'
-    app.config['MAIL_PASSWORD'] = 'wvzzqiebhyipqxrl'
+    app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', 'your_mail_password_placeholder')
     app.config['MAIL_DEFAULT_SENDER'] = 'chaitanyapaigude1204@gmail.com'
 
     # It's good practice to also set WTF_CSRF_ENABLED, though it's often true by default.
