@@ -20,7 +20,7 @@ csrf = CSRFProtect() # Initialize CSRFProtect instance
 mail = Mail() # Initialize Mail instance
 
 # MongoDB client (replace with your connection string if needed)
-client = MongoClient('mongodb://localhost:27017/')
+client = MongoClient("MONGO_URI",'mongodb://localhost:27017/')
 db = client.lets_connect_db
 
 def create_app():
