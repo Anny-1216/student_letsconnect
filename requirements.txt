@@ -25,3 +25,5 @@ wsproto==1.2.0
 WTForms==3.2.1
 Flask-Mail==0.9.1
 email_validator==2.1.1
+pymongo[srv]
+
